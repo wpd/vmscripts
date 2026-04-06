@@ -50,10 +50,10 @@ INSTALL_HOSTNAME="$2"
 # =============================================================================
 
 # Where to create the VM directory on the host
-VM_BASE_DIR="$HOME/Virtual Machines"
+VM_BASE_DIR="$HOME/vmware"
 
 # Path to the Ubuntu Server 24.04 ISO on the host
-UBUNTU_ISO="/path/to/ubuntu-24.04-live-server-amd64.iso"
+UBUNTU_ISO="./ubuntu-24.04.4-live-server-amd64.iso"
 
 # VM hardware settings
 VM_RAM_MB=8192       # RAM in MB (must be a multiple of 4)
@@ -66,13 +66,13 @@ INSTALL_USERNAME="wpd"
 # Password hash for the install user.
 # Generate with: openssl passwd -6 'yourpassword'
 # Replace the hash below with your own.
-INSTALL_PASSWORD_HASH='$6$rounds=4096$CHANGEME$CHANGEME'
+INSTALL_PASSWORD_HASH='$6$onnxrBvm/M6iBIyj$gZfNJ.p.sSXC5QQL/Yq.FFCyLVSUec200tsRh4Q2WOi4MQTvUX2EnMyWi6nv5zqZ8i9ccJQ1Mr0Lg2iW1egJy0'
 
 # Path to an authorized_keys file containing one or more SSH public keys
 # to install for the install user (one key per line).
 # Leave empty to rely on password authentication only.
 # Example: SSH_AUTHORIZED_KEYS_FILE="$HOME/.ssh/authorized_keys"
-SSH_AUTHORIZED_KEYS_FILE=""
+SSH_AUTHORIZED_KEYS_FILE="./authorized_keys"
 
 # =============================================================================
 # DERIVED PATHS — do not edit below this line
