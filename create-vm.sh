@@ -53,7 +53,7 @@ INSTALL_HOSTNAME="$2"
 VM_BASE_DIR="$HOME/vmware"
 
 # Path to the Ubuntu Server 24.04 ISO on the host
-UBUNTU_ISO="./ubuntu-24.04.4-live-server-amd64.iso"
+UBUNTU_ISO="$(pwd)/ubuntu-24.04.4-live-server-amd64.iso"
 
 # VM hardware settings
 VM_RAM_MB=8192       # RAM in MB (must be a multiple of 4)
@@ -159,6 +159,10 @@ echo "    VM created: $VMX"
 
 echo ""
 echo "==> Step 2: Creating ${VM_DISK_GB}GB virtual disk..."
+
+# vmcli VM Create auto-creates a default 20GB disk. Remove it and replace it
+# with a correctly-sized disk using vmware-vdiskmanager.
+rm -f "$VMDK"
 
 # Type 0 = single growable virtual disk (thin provisioned)
 # Adapter lsilogic is standard for Linux guests
