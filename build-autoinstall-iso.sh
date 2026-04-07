@@ -22,9 +22,17 @@
 #       ~/iso/ubuntu-24.04.4-live-server-amd64.iso \
 #       ~/iso/ubuntu-24.04.4-autoinstall.iso
 #
+# Prerequisites:
+#   - xorriso installed: sudo apt install -y xorriso
+#
+# Usage:
+#   ./build-autoinstall-iso.sh <source-iso> <output-iso>
+#
+# Example:
+#   ./build-autoinstall-iso.sh ~/iso/ubuntu-24.04.4-live-server-amd64.iso \
+#                              ~/iso/ubuntu-24.04.4-autoinstall.iso
+#
 # After building, update UBUNTU_ISO in create-vm.sh to point to the output ISO.
-# The separate seed ISO (sata0:1) attachment in create-vm.sh can then be
-# removed since the autoinstall config is now embedded in the bootable ISO.
 # =============================================================================
 
 set -euo pipefail
@@ -101,41 +109,19 @@ fi
 echo "    All prerequisites satisfied."
 
 # =============================================================================
-# STEP 1 — Extract the source ISO
+# STEP 1 — Build the files to overlay onto the ISO
 # =============================================================================
 
 WORK_DIR="$(mktemp -d)"
-BOOT_DIR="${WORK_DIR}/bootpart"
-ISO_DIR="${WORK_DIR}/iso"
 
 # Ensure cleanup on exit
 trap 'echo "==> Cleaning up..." && rm -rf "$WORK_DIR"' EXIT
 
 echo ""
-echo "==> Step 1: Extracting source ISO..."
-echo "    Source: $SOURCE_ISO"
-echo "    Working directory: $WORK_DIR"
+echo "==> Step 1: Building overlay files..."
 
-mkdir -p "$BOOT_DIR" "$ISO_DIR"
-
-xorriso -osirrox on \
-    -indev "$SOURCE_ISO" \
-    --extract_boot_images "$BOOT_DIR" \
-    -extract / "$ISO_DIR"
-
-# The extracted files are read-only — make them writable so we can modify them
-chmod -R u+w "$ISO_DIR"
-
-echo "    Extraction complete."
-
-# =============================================================================
-# STEP 2 — Embed the autoinstall user-data and meta-data in the ISO
-# =============================================================================
-
-echo ""
-echo "==> Step 2: Embedding autoinstall configuration..."
-
-mkdir -p "${ISO_DIR}/nocloud"
+# Create the nocloud directory that will be added to the ISO
+mkdir -p "${WORK_DIR}/nocloud"
 
 # Build the authorized-keys block if a key file was provided
 SSH_KEYS_YAML=""
@@ -147,7 +133,7 @@ if [ -n "$SSH_AUTHORIZED_KEYS_FILE" ]; then
     done < "$SSH_AUTHORIZED_KEYS_FILE"
 fi
 
-cat > "${ISO_DIR}/nocloud/user-data" << EOF
+cat > "${WORK_DIR}/nocloud/user-data" << EOF
 #cloud-config
 autoinstall:
   version: 1
@@ -188,81 +174,60 @@ ${SSH_KEYS_YAML}
     disable_root: true
 EOF
 
-# meta-data is required by cloud-init but can be empty
-touch "${ISO_DIR}/nocloud/meta-data"
+touch "${WORK_DIR}/nocloud/meta-data"
 
-echo "    Configuration embedded."
+echo "    Overlay files built."
 echo ""
-echo "    NOTE: The hostname in the embedded user-data is set to 'CHANGEME'."
-echo "    The hostname will be whatever you configure in create-vm.sh — but"
-echo "    since it is now baked into the ISO it cannot vary per VM."
-echo "    Consider setting it to a placeholder and changing it post-install,"
-echo "    or build a separate ISO per hostname."
+echo "    NOTE: The hostname in user-data is set to 'CHANGEME'."
+echo "    Consider setting it post-install, or build a separate ISO per hostname."
 
 # =============================================================================
-# STEP 3 — Patch the GRUB configuration
+# STEP 2 — Extract and patch the GRUB configuration
 # =============================================================================
 
 echo ""
-echo "==> Step 3: Patching GRUB configuration..."
+echo "==> Step 2: Patching GRUB configuration..."
 
-GRUB_CFG="${ISO_DIR}/boot/grub/grub.cfg"
+# Extract just the grub.cfg from the source ISO so we can patch it
+xorriso -osirrox on \
+    -indev "$SOURCE_ISO" \
+    -extract /boot/grub/grub.cfg "${WORK_DIR}/grub.cfg" \
+    2>/dev/null
 
-if [ ! -f "$GRUB_CFG" ]; then
-    echo "ERROR: GRUB config not found at: $GRUB_CFG"
-    echo "       The source ISO may not be a standard Ubuntu Server ISO."
-    exit 1
-fi
+chmod u+w "${WORK_DIR}/grub.cfg"
 
-# Insert an autoinstall menu entry at the top of grub.cfg, before any existing
-# entries. The set timeout=1 means GRUB will auto-select it after 1 second.
+# Insert an autoinstall menu entry at the top of grub.cfg with a 1-second
+# timeout so GRUB auto-selects it without waiting for user input
 AUTOINSTALL_ENTRY='set timeout=1\n\nmenuentry "Autoinstall Ubuntu Server" {\n    set gfxpayload=keep\n    linux   /casper/vmlinuz quiet autoinstall ds=nocloud\\;s=/cdrom/nocloud/ ---\n    initrd  /casper/initrd\n}\n'
 
-# Prepend the entry before the first existing menuentry
-sed -i "0,/^menuentry/s||${AUTOINSTALL_ENTRY}\n&|" "$GRUB_CFG"
+sed -i "0,/^menuentry/s||${AUTOINSTALL_ENTRY}\n&|" "${WORK_DIR}/grub.cfg"
 
 echo "    GRUB configuration patched."
 
 # =============================================================================
-# STEP 4 — Update the md5sum manifest
+# STEP 3 — Repack the ISO using xorriso overlay mode
 # =============================================================================
+#
+# Rather than extracting and repacking the entire ISO (which requires
+# reconstructing the complex EFI/MBR/GPT boot structures), we use xorriso's
+# -indev/-outdev mode to open the source ISO, overlay our changed files on
+# top of it, and write a new ISO. The -boot_image any replay flag tells
+# xorriso to carry over all boot structures from the source ISO exactly,
+# so the output is bootable without us needing to specify any boot parameters.
 
 echo ""
-echo "==> Step 4: Updating md5sum manifest..."
-
-# The ISO contains an md5sum.txt that the installer verifies at boot.
-# We must update it to reflect our modified and added files.
-pushd "$ISO_DIR" > /dev/null
-md5sum nocloud/user-data nocloud/meta-data boot/grub/grub.cfg >> md5sum.txt
-popd > /dev/null
-
-echo "    md5sum manifest updated."
-
-# =============================================================================
-# STEP 5 — Repack the ISO
-# =============================================================================
-
-echo ""
-echo "==> Step 5: Repacking ISO..."
+echo "==> Step 3: Building output ISO..."
+echo "    Source: $SOURCE_ISO"
 echo "    Output: $OUTPUT_ISO"
 
-# This xorriso command preserves the original EFI and MBR boot structures
-# extracted in Step 1, producing a hybrid ISO that boots on both BIOS and
-# UEFI systems — matching the boot capability of the original Ubuntu ISO.
-xorriso -as mkisofs \
-    -r \
-    -V "ubuntu-autoinstall" \
-    -J \
-    -boot-load-size 4 \
-    -boot-info-table \
-    -input-charset utf-8 \
-    -eltorito-alt-boot \
-    -b "${BOOT_DIR}/eltorito_img1_bios.img" \
-    -no-emul-boot \
-    -o "$OUTPUT_ISO" \
-    "$ISO_DIR"
+xorriso \
+    -indev "$SOURCE_ISO" \
+    -outdev "$OUTPUT_ISO" \
+    -map "${WORK_DIR}/nocloud" /nocloud \
+    -map "${WORK_DIR}/grub.cfg" /boot/grub/grub.cfg \
+    -boot_image any replay
 
-echo "    ISO repacked successfully."
+echo "    ISO built successfully."
 
 # =============================================================================
 # DONE
@@ -277,8 +242,5 @@ echo " Output ISO: $OUTPUT_ISO"
 echo ""
 echo " Next steps:"
 echo "   1. Update UBUNTU_ISO in create-vm.sh to point to this ISO"
-echo "   2. Remove the seed ISO attachment from create-vm.sh"
-echo "      (the sata0:1 vmcli Disk commands in Step 6)"
-echo "   3. Run create-vm.sh as normal — the installer will proceed"
-echo "      without any confirmation prompt"
+echo "   2. Run: ./create-vm.sh <vm-name>"
 echo "============================================================"
