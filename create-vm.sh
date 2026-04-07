@@ -9,7 +9,11 @@
 # Prerequisites:
 #   - VMware Workstation Pro 25H2 installed (provides vmcli, vmrun,
 #     vmware-vdiskmanager at /usr/bin)
-#   - genisoimage installed: sudo apt install -y genisoimage
+#   - genisoimage installed:
+#       sudo apt install -y genisoimage
+#   - libaio symlink created (suppresses vmrun warning on Ubuntu 24.04):
+#       sudo ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 \
+#                  /usr/lib/x86_64-linux-gnu/libaio.so.1
 #   - Ubuntu Server 24.04 ISO downloaded
 #
 # Usage:
