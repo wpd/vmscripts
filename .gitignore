@@ -1,1 +1,5 @@
 ubuntu-24.04.4-live-server-amd64.iso
+ubuntu-24.04.4-desktop-amd64.iso
+create-ubuntu.conf
+authorized_keys
+*~

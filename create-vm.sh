@@ -2,29 +2,30 @@
 # =============================================================================
 # create-vm.sh
 #
-# Creates a new VMware Workstation Pro 25H2 VM on a Ubuntu 24.04 LTS host,
-# builds a Ubuntu Server 24.04 autoinstall seed ISO, and boots the VM
-# headlessly to perform an unattended installation.
+# Creates a new VMware Workstation Pro 25H2 VM on a Ubuntu 24.04 LTS host
+# and boots it headlessly from a pre-built autoinstall ISO to perform an
+# unattended Ubuntu Server installation.
+#
+# This script expects the Ubuntu ISO to already contain the autoinstall
+# configuration. Use build-autoinstall-iso.sh to produce that ISO from
+# a standard Ubuntu Server 24.04 download.
 #
 # Prerequisites:
 #   - VMware Workstation Pro 25H2 installed (provides vmcli, vmrun,
 #     vmware-vdiskmanager at /usr/bin)
-#   - genisoimage installed:
-#       sudo apt install -y genisoimage
 #   - libaio symlink created (suppresses vmrun warning on Ubuntu 24.04):
 #       sudo ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 \
 #                  /usr/lib/x86_64-linux-gnu/libaio.so.1
-#   - Ubuntu Server 24.04 ISO downloaded
+#   - Autoinstall ISO built with build-autoinstall-iso.sh
 #
 # Usage:
-#   ./create-vm.sh <vm-name> <hostname>
+#   ./create-vm.sh <vm-name>
 #
 # Arguments:
 #   vm-name   Name of the VM (used for directory, VMX file, and display name)
-#   hostname  Hostname to assign to the installed Ubuntu system
 #
 # Example:
-#   ./create-vm.sh my-server my-server.local
+#   ./create-vm.sh my-server
 #
 # After running, the script will print instructions for monitoring the
 # installation progress via vmrun and SSH.
@@ -36,18 +37,16 @@ set -euo pipefail
 # ARGUMENT PARSING
 # =============================================================================
 
-if [ "$#" -ne 2 ]; then
-    echo "Usage: $0 <vm-name> <hostname>"
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <vm-name>"
     echo ""
     echo "  vm-name   Name of the VM (directory, VMX file, and display name)"
-    echo "  hostname  Hostname for the installed Ubuntu system"
     echo ""
-    echo "Example: $0 my-server my-server"
+    echo "Example: $0 my-server"
     exit 1
 fi
 
 VM_NAME="$1"
-INSTALL_HOSTNAME="$2"
 
 # =============================================================================
 # CONFIGURATION — edit these variables before running
@@ -56,27 +55,17 @@ INSTALL_HOSTNAME="$2"
 # Where to create the VM directory on the host
 VM_BASE_DIR="$HOME/vmware"
 
-# Path to the Ubuntu Server 24.04 ISO on the host
-UBUNTU_ISO="$(pwd)/ubuntu-24.04.4-live-server-amd64.iso"
+# Path to the autoinstall ISO built with build-autoinstall-iso.sh
+UBUNTU_ISO="$(pwd)/ubuntu-24.04.4-autoinstall.iso"
 
 # VM hardware settings
 VM_RAM_MB=8192       # RAM in MB (must be a multiple of 4)
 VM_DISK_GB=80        # Disk size in GB
 VM_CPUS=2            # Number of vCPUs
 
-# Ubuntu user account to create during installation
+# Username of the account created during installation — used only in the
+# SSH hint printed at the end of the script.
 INSTALL_USERNAME="wpd"
-
-# Password hash for the install user.
-# Generate with: openssl passwd -6 'yourpassword'
-# Replace the hash below with your own.
-INSTALL_PASSWORD_HASH='$6$onnxrBvm/M6iBIyj$gZfNJ.p.sSXC5QQL/Yq.FFCyLVSUec200tsRh4Q2WOi4MQTvUX2EnMyWi6nv5zqZ8i9ccJQ1Mr0Lg2iW1egJy0'
-
-# Path to an authorized_keys file containing one or more SSH public keys
-# to install for the install user (one key per line).
-# Leave empty to rely on password authentication only.
-# Example: SSH_AUTHORIZED_KEYS_FILE="$HOME/.ssh/authorized_keys"
-SSH_AUTHORIZED_KEYS_FILE="./authorized_keys"
 
 # =============================================================================
 # DERIVED PATHS — do not edit below this line
@@ -85,8 +74,6 @@ SSH_AUTHORIZED_KEYS_FILE="./authorized_keys"
 VM_DIR="${VM_BASE_DIR}/${VM_NAME}"
 VMX="${VM_DIR}/${VM_NAME}.vmx"
 VMDK="${VM_DIR}/${VM_NAME}.vmdk"
-SEED_DIR="${VM_DIR}/seed"
-SEED_ISO="${VM_DIR}/seed.iso"
 
 # =============================================================================
 # PREFLIGHT CHECKS
@@ -94,35 +81,27 @@ SEED_ISO="${VM_DIR}/seed.iso"
 
 echo "==> Checking prerequisites..."
 
-for cmd in vmcli vmrun vmware-vdiskmanager genisoimage; do
+for cmd in vmcli vmrun vmware-vdiskmanager; do
     if ! command -v "$cmd" &>/dev/null; then
         echo "ERROR: '$cmd' not found in PATH. Aborting."
-        echo "       Install genisoimage with: sudo apt install -y genisoimage"
         exit 1
     fi
 done
 
 if [ ! -f "$UBUNTU_ISO" ]; then
-    echo "ERROR: Ubuntu ISO not found at: $UBUNTU_ISO"
-    echo "       Update the UBUNTU_ISO variable in this script."
+    echo "ERROR: Autoinstall ISO not found at: $UBUNTU_ISO"
+    echo "       Build it with build-autoinstall-iso.sh, then update"
+    echo "       the UBUNTU_ISO variable in this script."
     exit 1
 fi
+
+# Ensure the ISO path is absolute so VMware can find it regardless of
+# where the script is run from.
+UBUNTU_ISO="$(realpath "$UBUNTU_ISO")"
 
 if [ -d "$VM_DIR" ]; then
     echo "ERROR: VM directory already exists: $VM_DIR"
-    echo "       Remove it or choose a different VM_NAME."
-    exit 1
-fi
-
-if [ -n "$SSH_AUTHORIZED_KEYS_FILE" ] && [ ! -f "$SSH_AUTHORIZED_KEYS_FILE" ]; then
-    echo "ERROR: SSH authorized keys file not found at: $SSH_AUTHORIZED_KEYS_FILE"
-    echo "       Update the SSH_AUTHORIZED_KEYS_FILE variable in this script."
-    exit 1
-fi
-
-if [ "$INSTALL_PASSWORD_HASH" = '$6$rounds=4096$CHANGEME$CHANGEME' ]; then
-    echo "ERROR: You must set INSTALL_PASSWORD_HASH before running."
-    echo "       Generate one with: openssl passwd -6 'yourpassword'"
+    echo "       Remove it or choose a different vm-name."
     exit 1
 fi
 
@@ -137,7 +116,7 @@ echo "==> Step 1: Creating VM '${VM_NAME}'..."
 
 mkdir -p "$VM_DIR"
 
-# Create the base VM structure (generates the .vmx file)
+# Create the base VM structure (generates the .vmx file and a default 20GB disk)
 vmcli VM Create -n "$VM_NAME" -d "$VM_DIR" -g ubuntu-64
 
 # Set display name
@@ -149,7 +128,8 @@ vmcli ConfigParams SetEntry memsize "$VM_RAM_MB" "$VMX"
 # Set CPU count
 vmcli ConfigParams SetEntry numvcpus "$VM_CPUS" "$VMX"
 
-# Set boot order: CD-ROM first for installation, then hard disk
+# Boot order: try disk first; on first boot the disk is blank so BIOS falls
+# through to the CD-ROM automatically. After installation the disk boots directly.
 vmcli ConfigParams SetEntry bios.bootOrder "hdd,cdrom" "$VMX"
 
 # Disable the boot delay (speeds up headless boots)
@@ -180,11 +160,11 @@ vmcli Disk SetPresent nvme0:0 1 "$VMX"
 echo "    Disk created and attached: $VMDK"
 
 # =============================================================================
-# STEP 3 — Attach the Ubuntu ISO
+# STEP 3 — Attach the autoinstall ISO
 # =============================================================================
 
 echo ""
-echo "==> Step 3: Attaching Ubuntu Server ISO..."
+echo "==> Step 3: Attaching autoinstall ISO..."
 
 vmcli Sata SetPresent sata0 1 "$VMX"
 vmcli Disk SetBackingInfo sata0:0 cdrom_image "$UBUNTU_ISO" 1 "$VMX"
@@ -208,102 +188,11 @@ vmcli Ethernet SetPresent ethernet0 1 "$VMX"
 echo "    Network configured: NAT (vmxnet3)"
 
 # =============================================================================
-# STEP 5 — Build the autoinstall seed ISO
+# STEP 5 — Start the VM headlessly
 # =============================================================================
 
 echo ""
-echo "==> Step 5: Building autoinstall seed ISO..."
-
-mkdir -p "$SEED_DIR"
-
-# Read SSH public keys from file if provided — one key per line becomes
-# one YAML list entry under authorized-keys
-if [ -n "$SSH_AUTHORIZED_KEYS_FILE" ]; then
-    SSH_KEY_BLOCK="  authorized-keys:"
-    while IFS= read -r key; do
-        # Skip blank lines and comment lines
-        [[ -z "$key" || "$key" == \#* ]] && continue
-        SSH_KEY_BLOCK="${SSH_KEY_BLOCK}\n    - \"${key}\""
-    done < "$SSH_AUTHORIZED_KEYS_FILE"
-else
-    SSH_KEY_BLOCK=""
-fi
-
-# Write the user-data autoinstall configuration
-cat > "${SEED_DIR}/user-data" << EOF
-#cloud-config
-autoinstall:
-  version: 1
-
-  locale: en_US.UTF-8
-
-  keyboard:
-    layout: us
-
-  network:
-    network:
-      version: 2
-      ethernets:
-        ens33:
-          dhcp4: true
-
-  storage:
-    layout:
-      name: lvm
-
-  identity:
-    hostname: ${INSTALL_HOSTNAME}
-    username: ${INSTALL_USERNAME}
-    password: "${INSTALL_PASSWORD_HASH}"
-
-  ssh:
-    install-server: true
-    allow-pw: true
-$([ -n "$SSH_KEY_BLOCK" ] && printf '%b' "$SSH_KEY_BLOCK")
-
-  packages:
-    - open-vm-tools
-
-  late-commands:
-    - curtin in-target -- systemctl enable ssh
-
-  user-data:
-    disable_root: true
-EOF
-
-# The meta-data file is required by cloud-init but can be empty
-touch "${SEED_DIR}/meta-data"
-
-# Build the seed ISO — must have volume label 'cidata' for cloud-init to find it
-genisoimage \
-    -output "$SEED_ISO" \
-    -volid cidata \
-    -joliet \
-    -rock \
-    "${SEED_DIR}/user-data" \
-    "${SEED_DIR}/meta-data"
-
-echo "    Seed ISO built: $SEED_ISO"
-
-# =============================================================================
-# STEP 7 — Attach the seed ISO as a second virtual CD-ROM
-# =============================================================================
-
-echo ""
-echo "==> Step 6: Attaching seed ISO..."
-
-vmcli Sata SetPresent sata0 1 "$VMX"
-vmcli Disk SetBackingInfo sata0:1 cdrom_image "$SEED_ISO" 1 "$VMX"
-vmcli Disk SetPresent sata0:1 1 "$VMX"
-
-echo "    Seed ISO attached: $SEED_ISO"
-
-# =============================================================================
-# STEP 8 — Start the VM headlessly
-# =============================================================================
-
-echo ""
-echo "==> Step 7: Starting VM headlessly..."
+echo "==> Step 5: Starting VM headlessly..."
 
 vmrun -T ws start "$VMX" nogui
 
