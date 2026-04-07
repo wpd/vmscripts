@@ -38,7 +38,8 @@ INSTALL_USERNAME="wpd"
 
 # Password hash for the install user.
 # Generate with: openssl passwd -6 'yourpassword'
-INSTALL_PASSWORD_HASH='$6$rounds=4096$CHANGEME$CHANGEME'
+# INSTALL_PASSWORD_HASH='$6$rounds=4096$CHANGEME$CHANGEME'
+INSTALL_PASSWORD_HASH='$6$onnxrBvm/M6iBIyj$gZfNJ.p.sSXC5QQL/Yq.FFCyLVSUec200tsRh4Q2WOi4MQTvUX2EnMyWi6nv5zqZ8i9ccJQ1Mr0Lg2iW1egJy0'
 
 # Path to an authorized_keys file containing one or more SSH public keys
 # to install for the install user (one key per line).
@@ -120,8 +121,7 @@ mkdir -p "$BOOT_DIR" "$ISO_DIR"
 xorriso -osirrox on \
     -indev "$SOURCE_ISO" \
     --extract_boot_images "$BOOT_DIR" \
-    -extract / "$ISO_DIR" \
-    2>/dev/null
+    -extract / "$ISO_DIR"
 
 # The extracted files are read-only — make them writable so we can modify them
 chmod -R u+w "$ISO_DIR"
@@ -260,8 +260,7 @@ xorriso -as mkisofs \
     -b "${BOOT_DIR}/eltorito_img1_bios.img" \
     -no-emul-boot \
     -o "$OUTPUT_ISO" \
-    "$ISO_DIR" \
-    2>/dev/null
+    "$ISO_DIR"
 
 echo "    ISO repacked successfully."
 
