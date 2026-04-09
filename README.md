@@ -1,8 +1,8 @@
-# VM Creation Scripts for VMware Workstation Pro 25H2
+# VM Creation Script
 
-Scripts for creating and configuring Ubuntu Server 24.04 VMs on a Ubuntu
-24.04 LTS host running VMware Workstation Pro 25H2, entirely from the command
-line with no VMware GUI required.
+Script for creating and configuring Ubuntu Server 24.04 VMs on a Ubuntu
+24.04 LTS host, entirely from the command line with no VMware GUI required.
+Assumes/Tested with VMware Workstation Pro 25H2.
 
 ---
 
@@ -31,7 +31,7 @@ each new VM.
 sudo apt install -y xorriso
 ```
 
-**2. Fix the libaio warning** (suppresses a harmless but noisy vmrun message):
+**2. Fix the libaio warning** (in order to suppress a harmless but noisy vmrun message):
 
 ```bash
 sudo ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 \
@@ -58,7 +58,7 @@ VM_DISK_GB=80        # Disk size in GB
 VM_CPUS=2            # Number of vCPUs
 
 # Ubuntu user account to create during installation
-INSTALL_USERNAME="wpd"
+INSTALL_USERNAME="???"
 
 # Password hash for the install user.
 # Generate with: openssl passwd -6 'yourpassword'
@@ -88,7 +88,7 @@ The hostname defaults to the vm-name if not specified.
 
 ```bash
 ./create-vm.sh my-server
-./create-vm.sh my-server my-server.local
+./create-vm.sh MyServer my-server
 ```
 
 The script will:
@@ -116,13 +116,10 @@ After the installer reboots into the installed system, find the VM's IP
 address:
 
 ```bash
-vmrun -T ws getGuestIPAddress ~/vmware/<vm-name>/<vm-name>.vmx -wait
+tail -F /etc/vmware/vmnet8/dhcpd/dhcpd.leases
 ```
 
-> `getGuestIPAddress` requires `open-vm-tools` to be running in the guest,
-> which is installed automatically by the autoinstall configuration.
-
-Then SSH in:
+Then SSH in (if desired):
 
 ```bash
 ssh <username>@<ip-address>
@@ -137,7 +134,7 @@ the VM always gets the same IP address, configure a static DHCP lease on the
 host.
 
 > **Note on VMware's NAT subnet:** VMware 25H2 automatically selects an unused
-> private subnet at installation time. On this host, VMware selected
+> private subnet at installation time. For this example, VMware selected
 > `172.16.40.0/24`. All examples below use this subnet. If you rebuild VMware
 > on a different host, verify your actual subnet first:
 >
@@ -181,27 +178,16 @@ Replace `00:0c:29:xx:xx:xx` with the MAC address from step 1 and
 sudo vmware-networks --stop && sudo vmware-networks --start
 ```
 
-**4. Renew the DHCP lease** (on the VM, via SSH or console):
-
-Ubuntu Desktop uses NetworkManager:
+**4. Restart the VM so that it requests the new lease:
 
 ```bash
-nmcli connection show
-nmcli connection down <connection-name> && nmcli connection up <connection-name>
+vmrun -T ws reset ~/vmware/<vm-name>/<vm-name>.vmx soft
 ```
-
-Ubuntu Server uses systemd-networkd:
-
-```bash
-sudo networkctl renew <interface-name>
-```
-
-The interface name can be found with `ip addr show`.
 
 **5. Verify** the VM received the correct IP:
 
 ```bash
-ip addr show
+ping 172.16.40.x
 ```
 
 ---

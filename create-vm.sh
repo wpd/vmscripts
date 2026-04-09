@@ -162,10 +162,10 @@ mkdir -p "${WORK_DIR}/nocloud"
 # Build the authorized-keys YAML block if a key file was provided
 SSH_KEYS_YAML=""
 if [ -n "$SSH_AUTHORIZED_KEYS_FILE" ]; then
-    SSH_KEYS_YAML="  authorized-keys:"
+    SSH_KEYS_YAML="    authorized-keys:"
     while IFS= read -r key; do
         [[ -z "$key" || "$key" == \#* ]] && continue
-        SSH_KEYS_YAML="${SSH_KEYS_YAML}"$'\n'"    - \"${key}\""
+        SSH_KEYS_YAML="${SSH_KEYS_YAML}"$'\n'"      - \"${key}\""
     done < "$SSH_AUTHORIZED_KEYS_FILE"
 fi
 
