@@ -235,6 +235,27 @@ ssh -p XXXX <username>@<host-ip>
 
 ---
 
+## Note on MAC Address Stability
+
+VMware generates the MAC address for each VM deterministically based on the
+VM's file path. Specifically, it derives a UUID from a combination of the host
+machine's hardware identifiers and the full path to the `.vmx` file, and then
+derives the MAC address from that UUID.
+
+The practical consequence is that if you delete a VM and recreate it using
+`create-vm.sh` with the same name in the same `VM_BASE_DIR`, the new VM will
+receive the same MAC address as the old one. This means:
+
+- Any static DHCP lease you configured in `dhcpd.conf` for the old VM will
+  automatically apply to the new VM — no changes to `dhcpd.conf` required.
+- Any SSH port forwards you configured in `nat.conf` will continue to work
+  without modification.
+
+The MAC address will change if you rename the VM or move it to a different
+directory, since either change alters the path from which the UUID is derived.
+
+---
+
 ## Cheat Sheet
 
 ### VM lifecycle
