@@ -44,11 +44,12 @@
 # script. Edit that file to set your ISO path, hardware settings, etc.
 #
 # Usage:
-#   ./create-vm.sh <vm-name> <hostname>
+#   ./create-vm.sh <vm-name> [<hostname>]
 #
 # Arguments:
 #   vm-name    Name of the VM (directory, VMX file, and display name)
-#   hostname   Hostname to assign to the installed Ubuntu system
+#   hostname   Hostname to assign to the installed Ubuntu system defaults to
+#.             <vm-name> if not specified.
 #
 # Example:
 #   ./create-vm.sh my-server my-server

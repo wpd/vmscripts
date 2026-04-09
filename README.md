@@ -178,7 +178,7 @@ Replace `00:0c:29:xx:xx:xx` with the MAC address from step 1 and
 sudo vmware-networks --stop && sudo vmware-networks --start
 ```
 
-**4. Restart the VM so that it requests the new lease:
+**4. Restart the VM so that it requests the new lease:**
 
 ```bash
 vmrun -T ws reset ~/vmware/<vm-name>/<vm-name>.vmx soft
