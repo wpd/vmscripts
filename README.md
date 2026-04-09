@@ -66,6 +66,11 @@ INSTALL_PASSWORD_HASH='$6$rounds=4096$CHANGEME$CHANGEME'
 
 # Path to an authorized_keys file (optional — leave empty for password only)
 SSH_AUTHORIZED_KEYS_FILE=""
+
+# Timezone for the installed system.
+# Use a tz database name, e.g. America/New_York, America/Los_Angeles, Europe/London
+# List all valid values with: timedatectl list-timezones
+TIMEZONE="America/New_York"
 ```
 
 To generate a password hash:

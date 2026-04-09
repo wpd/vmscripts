@@ -143,6 +143,13 @@ if [ -d "$VM_DIR" ]; then
     exit 1
 fi
 
+if [ -z "$TIMEZONE" ]; then
+    echo "ERROR: TIMEZONE is not set in create-vm.conf."
+    echo "       Example: TIMEZONE=\"America/New_York\""
+    echo "       List valid values with: timedatectl list-timezones"
+    exit 1
+fi
+
 echo "    All prerequisites satisfied."
 
 # =============================================================================
@@ -176,6 +183,8 @@ autoinstall:
   version: 1
 
   locale: en_US.UTF-8
+
+  timezone: ${TIMEZONE}
 
   keyboard:
     layout: us
