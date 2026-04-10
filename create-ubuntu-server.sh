@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# create-vm.sh
+# create-ubuntu-server.sh
 #
 # Developed with Claude (Anthropic), April 2026.
 #
@@ -26,7 +26,7 @@
 # DEALINGS IN THE SOFTWARE.
 # =============================================================================
 # =============================================================================
-# create-vm.sh
+# create-ubuntu-server.sh
 #
 # Builds a customised Ubuntu Server 24.04 autoinstall ISO and uses it to
 # create and boot a new VMware Workstation Pro 25H2 VM on a Ubuntu 24.04 LTS
@@ -40,11 +40,11 @@
 #       sudo ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 \
 #                  /usr/lib/x86_64-linux-gnu/libaio.so.1
 #
-# Configuration is read from create-vm.conf in the same directory as this
+# Configuration is read from create-ubuntu.conf in the same directory as this
 # script. Edit that file to set your ISO path, hardware settings, etc.
 #
 # Usage:
-#   ./create-vm.sh <vm-name> [<hostname>]
+#   ./create-ubuntu-server.sh <vm-name> [<hostname>]
 #
 # Arguments:
 #   vm-name    Name of the VM (directory, VMX file, and display name)
@@ -52,7 +52,7 @@
 #.             <vm-name> if not specified.
 #
 # Example:
-#   ./create-vm.sh my-server my-server
+#   ./create-ubuntu-server.sh my-server my-server
 #
 # After running, the script will print instructions for monitoring the
 # installation progress via vmrun and SSH.
@@ -65,15 +65,15 @@ set -euo pipefail
 # =============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONF_FILE="${SCRIPT_DIR}/create-vm.conf"
+CONF_FILE="${SCRIPT_DIR}/create-ubuntu.conf"
 
 if [ ! -f "$CONF_FILE" ]; then
     echo "ERROR: Configuration file not found: $CONF_FILE"
-    echo "       Create it alongside this script. See create-vm.conf for a template."
+    echo "       Create it alongside this script. See create-ubuntu.conf for a template."
     exit 1
 fi
 
-# shellcheck source=create-vm.conf
+# shellcheck source=create-ubuntu.conf
 source "$CONF_FILE"
 
 # =============================================================================
@@ -121,18 +121,18 @@ SOURCE_ISO="$(realpath "$UBUNTU_SOURCE_ISO")"
 
 if [ ! -f "$SOURCE_ISO" ]; then
     echo "ERROR: Source ISO not found: $SOURCE_ISO"
-    echo "       Update UBUNTU_SOURCE_ISO in create-vm.conf."
+    echo "       Update UBUNTU_SOURCE_ISO in create-ubuntu.conf."
     exit 1
 fi
 
 if [ -n "$SSH_AUTHORIZED_KEYS_FILE" ] && [ ! -f "$SSH_AUTHORIZED_KEYS_FILE" ]; then
     echo "ERROR: SSH authorized keys file not found: $SSH_AUTHORIZED_KEYS_FILE"
-    echo "       Update SSH_AUTHORIZED_KEYS_FILE in create-vm.conf."
+    echo "       Update SSH_AUTHORIZED_KEYS_FILE in create-ubuntu.conf."
     exit 1
 fi
 
 if [ "$INSTALL_PASSWORD_HASH" = '$6$rounds=4096$CHANGEME$CHANGEME' ]; then
-    echo "ERROR: You must set INSTALL_PASSWORD_HASH in create-vm.conf."
+    echo "ERROR: You must set INSTALL_PASSWORD_HASH in create-ubuntu.conf."
     echo "       Generate one with: openssl passwd -6 'yourpassword'"
     exit 1
 fi
@@ -144,7 +144,7 @@ if [ -d "$VM_DIR" ]; then
 fi
 
 if [ -z "$TIMEZONE" ]; then
-    echo "ERROR: TIMEZONE is not set in create-vm.conf."
+    echo "ERROR: TIMEZONE is not set in create-ubuntu.conf."
     echo "       Example: TIMEZONE=\"America/New_York\""
     echo "       List valid values with: timedatectl list-timezones"
     exit 1

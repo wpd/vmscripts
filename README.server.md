@@ -15,8 +15,8 @@ Assumes/Tested with VMware Workstation Pro 25H2.
 
 | File | Purpose |
 |------|---------|
-| `create-vm.sh` | Main script — builds autoinstall ISO and creates VM |
-| `create-vm.conf` | User configuration — edit this, not the script |
+| `create-ubuntu-server.sh` | Main script — builds autoinstall ISO and creates VM |
+| `create-ubuntu.conf.example` | User configuration template — copy to `create-ubuntu.conf` and edit |
 
 ---
 
@@ -42,8 +42,9 @@ sudo ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 \
 
 ## Configuration
 
-Edit `create-vm.conf` before running the script for the first time. The script
-itself never needs to be edited.
+Edit `create-ubuntu.conf` before running the script for the first time. Copy
+`create-ubuntu.conf.example` to `create-ubuntu.conf` and edit it to suit your
+environment. The script itself never needs to be edited.
 
 ```bash
 # Where to create VM directories on the host
@@ -84,7 +85,7 @@ openssl passwd -6 'yourpassword'
 ## Creating a VM
 
 ```bash
-./create-vm.sh <vm-name> [hostname]
+./create-ubuntu-server.sh <vm-name> [hostname]
 ```
 
 The hostname defaults to the vm-name if not specified.
@@ -92,8 +93,8 @@ The hostname defaults to the vm-name if not specified.
 **Examples:**
 
 ```bash
-./create-vm.sh my-server
-./create-vm.sh MyServer my-server
+./create-ubuntu-server.sh my-server
+./create-ubuntu-server.sh MyServer my-server
 ```
 
 The script will:
@@ -243,7 +244,7 @@ machine's hardware identifiers and the full path to the `.vmx` file, and then
 derives the MAC address from that UUID.
 
 The practical consequence is that if you delete a VM and recreate it using
-`create-vm.sh` with the same name in the same `VM_BASE_DIR`, the new VM will
+`create-ubuntu-server.sh` with the same name in the same `VM_BASE_DIR`, the new VM will
 receive the same MAC address as the old one. This means:
 
 - Any static DHCP lease you configured in `dhcpd.conf` for the old VM will
