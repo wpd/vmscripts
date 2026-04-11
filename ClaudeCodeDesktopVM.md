@@ -31,20 +31,45 @@ VMware console.
 
 ---
 
-## Phase 1 — Install a Ubuntu Server Base
+## Phase 1 — Install a Ubuntu Base VM
 
-Follow the instructions in `create-ubuntu-server.sh` and its accompanying `README.server.md` to
-create and install a Ubuntu Server 24.04 VM.  It is recommended that the server
-be created with a minimum of 8GB of RAM and 80GB of disk space.  Once the
-installer has completed and the VM has rebooted, verify that you can SSH into it
-before proceeding.
+There are two paths to this starting point. Choose one:
+
+**Path A — Desktop VM (recommended for Claude Code use):**
+Run `create-ubuntu-desktop.sh` as documented in `README.desktop.md`. This
+installs the full Ubuntu Desktop environment during the unattended
+installation, so you can proceed directly to Phase 3 (RDP access) once the
+VM has rebooted and you can SSH into it. Skip Phase 2.
+
+```bash
+./create-ubuntu-desktop.sh <vm-name>
+```
+
+**Path B — Server VM upgraded to desktop:**
+Run `create-ubuntu-server.sh` as documented in `README.server.md` to create
+a minimal server VM first, then follow Phase 2 to install the desktop
+environment as a post-installation step. This path takes longer overall but
+gives you a working SSH-accessible server first, which you can keep as a
+pure server VM if you decide you don't need the desktop after all.
+
+```bash
+./create-ubuntu-server.sh <vm-name>
+```
+
+Once the installer has completed and the VM has rebooted, verify that you can
+SSH into it before proceeding.
+
+> **Recommended minimums:** 8GB RAM and 80GB disk for a desktop VM.
 
 ---
 
 ## Phase 2 — Install the Ubuntu Desktop Environment
 
-All commands in this phase and through Phase 6 are run via SSH unless
-otherwise noted.
+> **Skip this phase if you used Path A** (`create-ubuntu-desktop.sh`) in
+> Phase 1 — the desktop environment was already installed during the
+> unattended installation.
+
+All commands in this phase are run via SSH.
 
 **1. Update the system:**
 
@@ -81,7 +106,7 @@ sudo systemctl mask systemd-networkd-wait-online.service
 sudo apt install -y open-vm-tools-desktop
 ```
 
-**6. Reboot:**
+**7. Reboot:**
 
 ```bash
 sudo reboot
@@ -93,7 +118,7 @@ SSH will drop. Wait about 30 seconds then reconnect.
 
 ## Phase 3 — Enable RDP Access via xrdp
 
-If the `create-ubuntu-server.sh` instructions are followed faithfully, then the
+If the `create-vm.sh` instructions are followed faithfully, then the
 VM will have been started without the VMware GUI (`nogui`). Rather than using the
 VMware console for desktop access, configure `xrdp` so you can connect
 directly via Remote Desktop on Windows or the Windows App on a Mac.
