@@ -113,10 +113,11 @@ SSH will drop. Wait about 30 seconds then reconnect.
 
 ## Phase 3 — Enable RDP Access via xrdp
 
-If the `create-vm.sh` instructions are followed faithfully, then the
-VM will have been started without the VMware GUI (`nogui`). Rather than using the
-VMware console for desktop access, configure `xrdp` so you can connect
-directly via Remote Desktop on Windows or the Windows App on a Mac.
+If the `create-ubuntu-server.sh` or `create-ubuntu-desktop.sh` instructions
+are followed faithfully, then the VM will have been started without the VMware
+GUI (`nogui`). Rather than using the VMware console for desktop access,
+configure `xrdp` so you can connect directly via Remote Desktop on Windows or
+the Windows App on a Mac.
 
 **1. Install xrdp:**
 
