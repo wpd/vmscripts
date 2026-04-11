@@ -10,9 +10,12 @@
 # Where to create VM directories on the host
 VM_BASE_DIR="$HOME/vmware"
 
-# Path to the original Ubuntu Server 24.04 ISO (not pre-modified)
+# Path to the Ubuntu Server 24.04 ISO (used by create-ubuntu-server.sh)
 UBUNTU_SERVER_SOURCE_ISO="/path/to/ubuntu-24.04.4-live-server-amd64.iso"
+
+# Path to the Ubuntu Desktop 24.04 ISO (used by create-ubuntu-desktop.sh)
 UBUNTU_DESKTOP_SOURCE_ISO="/path/to/ubuntu-24.04.4-desktop-amd64.iso"
+
 
 # VM hardware settings
 VM_RAM_MB=8192       # RAM in MB (must be a multiple of 4)

@@ -117,8 +117,8 @@ The hostname defaults to the vm-name if not specified.
 
 ```bash
 ./create-ubuntu-server.sh my-server
-./create-ubuntu-desktop.sh claude-code-vm
-./create-ubuntu-desktop.sh claude-code-vm claude-code-vm
+./create-ubuntu-desktop.sh my-desktop
+./create-ubuntu-desktop.sh MyDesktopVM mydesktop
 ```
 
 Each script will:
@@ -153,12 +153,6 @@ your chosen hostname. Then SSH in:
 ```bash
 ssh <username>@<ip-address>
 ```
-
-### Next steps after a desktop VM installation
-
-Once the VM is accessible via SSH, follow `ClaudeCodeDesktopVM.md` starting
-from **Phase 3** (RDP access via xrdp). Phases 1 and 2 of that document are
-handled by `create-ubuntu-desktop.sh`.
 
 ---
 
@@ -256,7 +250,7 @@ with any other VM's port forward.
 sudo vmware-networks --stop && sudo vmware-networks --start
 ```
 
-**3. Connect** from your Mac (or any external machine):
+**3. Connect** from your external machine:
 
 ```bash
 ssh -p XXXX <username>@<host-ip>

@@ -17,11 +17,6 @@ Claude can navigate your running web app, read console errors, and fix the
 code without you switching contexts — requires a visible Chrome window running
 in a real desktop session.
 
-The approach here is to install the Ubuntu Desktop environment on top of a
-server base, then enable RDP access via `xrdp`, so you can connect using
-Remote Desktop on a PC or the  Windows App on a Mac without needing the
-VMware console.
-
 ---
 
 ## Prerequisites
@@ -36,7 +31,7 @@ VMware console.
 There are two paths to this starting point. Choose one:
 
 **Path A — Desktop VM (recommended for Claude Code use):**
-Run `create-ubuntu-desktop.sh` as documented in `README.desktop.md`. This
+Run `create-ubuntu-desktop.sh` as documented in `README.vm.md`. This
 installs the full Ubuntu Desktop environment during the unattended
 installation, so you can proceed directly to Phase 3 (RDP access) once the
 VM has rebooted and you can SSH into it. Skip Phase 2.
@@ -46,7 +41,7 @@ VM has rebooted and you can SSH into it. Skip Phase 2.
 ```
 
 **Path B — Server VM upgraded to desktop:**
-Run `create-ubuntu-server.sh` as documented in `README.server.md` to create
+Run `create-ubuntu-server.sh` as documented in `README.vm.md` to create
 a minimal server VM first, then follow Phase 2 to install the desktop
 environment as a post-installation step. This path takes longer overall but
 gives you a working SSH-accessible server first, which you can keep as a
