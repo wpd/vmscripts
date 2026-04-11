@@ -1,7 +1,7 @@
-# Ubuntu Server Development VM — Setup Guide
+# Ubuntu VM Setup Guide
 
-Script for creating a Ubuntu Server 24.04 VM on a Ubuntu 24.04 LTS host,
-entirely from the command line with no VMware GUI required.
+Scripts for creating Ubuntu 24.04 VMs on a Ubuntu 24.04 LTS host, entirely
+from the command line with no VMware GUI required.
 Assumes/Tested with VMware Workstation Pro 25H2.
 
 ---
@@ -11,11 +11,27 @@ Assumes/Tested with VMware Workstation Pro 25H2.
 
 ---
 
+## Choosing a Script
+
+Two scripts are provided depending on what you intend to do with the VM:
+
+| Script | ISO required | Result |
+|--------|-------------|--------|
+| `create-ubuntu-server.sh` | Ubuntu Server 24.04 | Minimal CLI-only server VM |
+| `create-ubuntu-desktop.sh` | Ubuntu Desktop 24.04 | Full GNOME desktop VM |
+
+If you plan to use Claude Code with the Chrome browser integration for web app
+debugging, use `create-ubuntu-desktop.sh` and follow `ClaudeCodeDesktopVM.md`
+after installation. If you just need a server VM, use `create-ubuntu-server.sh`.
+
+---
+
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `create-ubuntu-server.sh` | Main script — builds autoinstall ISO and creates VM |
+| `create-ubuntu-server.sh` | Creates a minimal Ubuntu Server VM |
+| `create-ubuntu-desktop.sh` | Creates a full Ubuntu Desktop VM |
 | `create-ubuntu.conf.example` | User configuration template — copy to `create-ubuntu.conf` and edit |
 
 ---
@@ -31,7 +47,7 @@ each new VM.
 sudo apt install -y xorriso
 ```
 
-**2. Fix the libaio warning** (in order to suppress a harmless but noisy vmrun message):
+**2. Fix the libaio warning** (suppresses a harmless but noisy vmrun message):
 
 ```bash
 sudo ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 \
@@ -43,7 +59,7 @@ sudo ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 \
 ## Configuration
 
 Copy `create-ubuntu.conf.example` to `create-ubuntu.conf` and edit it before
-running the script. The script itself never needs to be edited.
+running either script. Neither script needs to be edited directly.
 
 ```bash
 cp create-ubuntu.conf.example create-ubuntu.conf
@@ -53,8 +69,11 @@ cp create-ubuntu.conf.example create-ubuntu.conf
 # Where to create VM directories on the host
 VM_BASE_DIR="$HOME/vmware"
 
-# Path to the original Ubuntu Server 24.04 ISO (not pre-modified)
+# Path to the Ubuntu Server 24.04 ISO (used by create-ubuntu-server.sh)
 UBUNTU_SERVER_SOURCE_ISO="/path/to/ubuntu-24.04.4-live-server-amd64.iso"
+
+# Path to the Ubuntu Desktop 24.04 ISO (used by create-ubuntu-desktop.sh)
+UBUNTU_DESKTOP_SOURCE_ISO="/path/to/ubuntu-24.04.4-desktop-amd64.iso"
 
 # VM hardware settings
 VM_RAM_MB=8192       # RAM in MB (must be a multiple of 4)
@@ -89,6 +108,7 @@ openssl passwd -6 'yourpassword'
 
 ```bash
 ./create-ubuntu-server.sh <vm-name> [hostname]
+./create-ubuntu-desktop.sh <vm-name> [hostname]
 ```
 
 The hostname defaults to the vm-name if not specified.
@@ -96,14 +116,14 @@ The hostname defaults to the vm-name if not specified.
 **Examples:**
 
 ```bash
-./create-ubuntu-server.sh server-vm
-./create-ubuntu-server.sh server-vm server
+./create-ubuntu-server.sh my-server
+./create-ubuntu-desktop.sh claude-code-vm
+./create-ubuntu-desktop.sh claude-code-vm claude-code-vm
 ```
 
-The script will:
+Each script will:
 
-1. Build a customised Ubuntu Server autoinstall ISO with your configuration
-   baked in
+1. Build a customised Ubuntu autoinstall ISO with your configuration baked in
 2. Create a new VM with `vmcli`
 3. Replace the default 20GB disk with a correctly-sized disk
 4. Attach the autoinstall ISO
@@ -127,14 +147,18 @@ Monitor for the installed system's DHCP lease to appear:
 tail -F /etc/vmware/vmnet8/dhcpd/dhcpd.leases
 ```
 
-When the installer completes and the VM reboots into the installed desktop
-system, a new lease will appear with your chosen hostname.
-
-Then SSH in (if desired):
+When the installer completes and the VM reboots, a new lease will appear with
+your chosen hostname. Then SSH in:
 
 ```bash
 ssh <username>@<ip-address>
 ```
+
+### Next steps after a desktop VM installation
+
+Once the VM is accessible via SSH, follow `ClaudeCodeDesktopVM.md` starting
+from **Phase 3** (RDP access via xrdp). Phases 1 and 2 of that document are
+handled by `create-ubuntu-desktop.sh`.
 
 ---
 
@@ -205,7 +229,8 @@ ping 172.16.40.x
 
 ## Post-Installation: Configure SSH Port Forwarding
 
-To SSH into the VM directly from outside the VM host, configure a port forward in VMware's NAT configuration.
+To SSH into the VM directly from outside the host, configure a port forward
+in VMware's NAT configuration.
 
 **1. Edit the NAT configuration file** (on the host):
 
@@ -246,9 +271,9 @@ VM's file path. Specifically, it derives a UUID from a combination of the host
 machine's hardware identifiers and the full path to the `.vmx` file, and then
 derives the MAC address from that UUID.
 
-The practical consequence is that if you delete a VM and recreate it using
-`create-ubuntu-server.sh` with the same name in the same `VM_BASE_DIR`, the new VM will
-receive the same MAC address as the old one. This means:
+The practical consequence is that if you delete a VM and recreate it with the
+same name in the same `VM_BASE_DIR`, the new VM will receive the same MAC
+address as the old one. This means:
 
 - Any static DHCP lease you configured in `dhcpd.conf` for the old VM will
   automatically apply to the new VM — no changes to `dhcpd.conf` required.
