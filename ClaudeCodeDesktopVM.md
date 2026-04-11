@@ -106,7 +106,7 @@ sudo systemctl mask systemd-networkd-wait-online.service
 sudo apt install -y open-vm-tools-desktop
 ```
 
-**7. Reboot:**
+**6. Reboot:**
 
 ```bash
 sudo reboot
@@ -364,6 +364,7 @@ Similarly, for the Chrome extension, you may sign out via the extension panel or
 entirely via `chrome://extensions` before destroying the VM. 
 
 Ultimately, if you are destroying the VM, there is no need to remove the credentials from the VM prior to destroying it.  Revoking them from the Antrhopic account is sufficient, and good hygene.
+
 ---
 
 ## Phase 7 — Install the Claude in Chrome Extension

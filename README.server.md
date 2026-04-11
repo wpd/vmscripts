@@ -1,7 +1,7 @@
-# VM Creation Script
+# Ubuntu Server Development VM — Setup Guide
 
-Script for creating and configuring Ubuntu Server 24.04 VMs on a Ubuntu
-24.04 LTS host, entirely from the command line with no VMware GUI required.
+Script for creating a Ubuntu Server 24.04 VM on a Ubuntu 24.04 LTS host,
+entirely from the command line with no VMware GUI required.
 Assumes/Tested with VMware Workstation Pro 25H2.
 
 ---
@@ -42,16 +42,19 @@ sudo ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 \
 
 ## Configuration
 
-Edit `create-ubuntu.conf` before running the script for the first time. Copy
-`create-ubuntu.conf.example` to `create-ubuntu.conf` and edit it to suit your
-environment. The script itself never needs to be edited.
+Copy `create-ubuntu.conf.example` to `create-ubuntu.conf` and edit it before
+running the script. The script itself never needs to be edited.
+
+```bash
+cp create-ubuntu.conf.example create-ubuntu.conf
+```
 
 ```bash
 # Where to create VM directories on the host
 VM_BASE_DIR="$HOME/vmware"
 
 # Path to the original Ubuntu Server 24.04 ISO (not pre-modified)
-UBUNTU_SOURCE_ISO="/path/to/ubuntu-24.04.4-live-server-amd64.iso"
+UBUNTU_SERVER_SOURCE_ISO="/path/to/ubuntu-24.04.4-live-server-amd64.iso"
 
 # VM hardware settings
 VM_RAM_MB=8192       # RAM in MB (must be a multiple of 4)
@@ -93,8 +96,8 @@ The hostname defaults to the vm-name if not specified.
 **Examples:**
 
 ```bash
-./create-ubuntu-server.sh my-server
-./create-ubuntu-server.sh MyServer my-server
+./create-ubuntu-server.sh server-vm
+./create-ubuntu-server.sh server-vm server
 ```
 
 The script will:
@@ -118,12 +121,14 @@ Check whether the VM is still running:
 vmrun -T ws list
 ```
 
-After the installer reboots into the installed system, find the VM's IP
-address:
+Monitor for the installed system's DHCP lease to appear:
 
 ```bash
 tail -F /etc/vmware/vmnet8/dhcpd/dhcpd.leases
 ```
+
+When the installer completes and the VM reboots into the installed desktop
+system, a new lease will appear with your chosen hostname.
 
 Then SSH in (if desired):
 
@@ -200,9 +205,7 @@ ping 172.16.40.x
 
 ## Post-Installation: Configure SSH Port Forwarding
 
-To SSH into the VM directly from outside the host (e.g. from your Mac) without
-needing to SSH into the host first, configure a port forward in VMware's NAT
-configuration.
+To SSH into the VM directly from outside the VM host, configure a port forward in VMware's NAT configuration.
 
 **1. Edit the NAT configuration file** (on the host):
 
@@ -318,6 +321,9 @@ cat /etc/vmware/vmnet8/dhcpd/dhcpd.conf
 
 # View current DHCP leases (shows IPs assigned to running VMs)
 cat /etc/vmware/vmnet8/dhcpd/dhcpd.leases
+
+# Monitor for new leases in real time
+tail -F /etc/vmware/vmnet8/dhcpd/dhcpd.leases
 
 # View the NAT port forwarding configuration
 cat /etc/vmware/vmnet8/nat/nat.conf

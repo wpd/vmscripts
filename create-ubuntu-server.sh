@@ -49,13 +49,13 @@
 # Arguments:
 #   vm-name    Name of the VM (directory, VMX file, and display name)
 #   hostname   Hostname to assign to the installed Ubuntu system defaults to
-#.             <vm-name> if not specified.
+#              <vm-name> if not specified.
 #
 # Example:
 #   ./create-ubuntu-server.sh my-server my-server
 #
 # After running, the script will print instructions for monitoring the
-# installation progress via vmrun and SSH.
+# installation progress and next steps.
 # =============================================================================
 
 set -euo pipefail
@@ -87,8 +87,8 @@ if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
     echo "  hostname   Hostname for the installed Ubuntu system"
     echo "             (optional, defaults to vm-name if not specified)"
     echo ""
-    echo "Example: $0 my-server"
-    echo "Example: $0 my-server my-server.local"
+    echo "Example: $0 server-vm"
+    echo "Example: $0 server-vm server"
     exit 1
 fi
 
@@ -117,11 +117,11 @@ for cmd in vmcli vmrun vmware-vdiskmanager xorriso; do
     fi
 done
 
-SOURCE_ISO="$(realpath "$UBUNTU_SOURCE_ISO")"
+SOURCE_ISO="$(realpath "$UBUNTU_SERVER_SOURCE_ISO")"
 
 if [ ! -f "$SOURCE_ISO" ]; then
     echo "ERROR: Source ISO not found: $SOURCE_ISO"
-    echo "       Update UBUNTU_SOURCE_ISO in create-ubuntu.conf."
+    echo "       Update UBUNTU_SERVER_SOURCE_ISO in create-ubuntu.conf."
     exit 1
 fi
 
@@ -400,13 +400,14 @@ echo ""
 echo " Check VM power state:"
 echo "   vmrun -T ws list"
 echo ""
-echo " The VM will reboot automatically when installation completes."
-echo " After reboot, find the VM's IP address with:"
-echo "   vmrun -T ws getGuestIPAddress '$VMX' -wait"
+echo " Monitor for the installed system's DHCP lease:"
+echo "   tail -F /etc/vmware/vmnet8/dhcpd/dhcpd.leases"
+echo " or monitor the load of the vmware-vmx process on the server"
+echo " machine using:"
+echo "   top"
 echo ""
-echo " Then SSH in:"
+echo " The VM will reboot automatically when installation completes."
+echo " After reboot, SSH in:"
 echo "   ssh ${INSTALL_USERNAME}@<ip-address>"
 echo ""
-echo " NOTE: getGuestIPAddress requires open-vm-tools to be running"
-echo "       in the guest, which is installed by the autoinstall config."
 echo "============================================================"

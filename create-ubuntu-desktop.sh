@@ -28,19 +28,10 @@
 # =============================================================================
 # create-ubuntu-desktop.sh
 #
-# Builds a customised Ubuntu Server 24.04 autoinstall ISO — with the full
+# Builds a customised Ubuntu Desktop 24.04 autoinstall ISO — with the full
 # Ubuntu Desktop environment included — and uses it to create and boot a new
-# VMware Workstation Pro 25H2 VM on a Ubuntu 24.04 LTS host. The installation
+# VMWare VM on a Ubuntu 24.04 LTS host. The installation
 # runs headlessly and requires no user interaction.
-#
-# The resulting VM boots into a full GNOME desktop environment. It is intended
-# as the starting point for the Claude Code desktop development workflow
-# documented in ClaudeCodeDesktopVM.md, which covers RDP access, Rust, Chrome,
-# Claude Code, and the Claude in Chrome extension.
-#
-# Note: Installing ubuntu-desktop during autoinstall significantly increases
-# installation time compared to create-ubuntu-server.sh. Expect 10-20 minutes
-# depending on host disk and network speed.
 #
 # Prerequisites:
 #   - VMware Workstation Pro 25H2 installed (provides vmcli, vmrun,
@@ -98,8 +89,8 @@ if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
     echo "  hostname   Hostname for the installed Ubuntu system"
     echo "             (optional, defaults to vm-name if not specified)"
     echo ""
-    echo "Example: $0 claude-code-vm"
-    echo "Example: $0 claude-code-vm claude-code-vm"
+    echo "Example: $0 desktop-vm"
+    echo "Example: $0 desktop-vm desktop"
     exit 1
 fi
 
@@ -128,11 +119,11 @@ for cmd in vmcli vmrun vmware-vdiskmanager xorriso; do
     fi
 done
 
-SOURCE_ISO="$(realpath "$UBUNTU_SOURCE_ISO")"
+SOURCE_ISO="$(realpath "$UBUNTU_DESKTOP_SOURCE_ISO")"
 
 if [ ! -f "$SOURCE_ISO" ]; then
     echo "ERROR: Source ISO not found: $SOURCE_ISO"
-    echo "       Update UBUNTU_SOURCE_ISO in create-ubuntu.conf."
+    echo "       Update UBUNTU_DESKTOP_SOURCE_ISO in create-ubuntu.conf."
     exit 1
 fi
 
@@ -226,13 +217,9 @@ ${SSH_KEYS_YAML}
   packages:
     - open-vm-tools
     - open-vm-tools-desktop
-    - ubuntu-desktop
-
+    - curl
   late-commands:
     - curtin in-target -- systemctl enable ssh
-    - curtin in-target -- systemctl set-default graphical.target
-    - curtin in-target -- systemctl disable systemd-networkd-wait-online.service
-    - curtin in-target -- systemctl mask systemd-networkd-wait-online.service
 
   user-data:
     disable_root: true
@@ -413,19 +400,17 @@ echo "============================================================"
 echo " VM '${VM_NAME}' is installing Ubuntu Desktop 24.04"
 echo "============================================================"
 echo ""
-echo " NOTE: Desktop installation takes significantly longer than"
-echo "       server installation — expect 10-20 minutes."
-echo ""
 echo " Check VM power state:"
 echo "   vmrun -T ws list"
 echo ""
 echo " Monitor for the installed system's DHCP lease:"
 echo "   tail -F /etc/vmware/vmnet8/dhcpd/dhcpd.leases"
+echo " or monitor the load of the vmware-vmx process on the server"
+echo " machine using:"
+echo "   top"
 echo ""
 echo " The VM will reboot automatically when installation completes."
 echo " After reboot, SSH in:"
 echo "   ssh ${INSTALL_USERNAME}@<ip-address>"
 echo ""
-echo " Then follow ClaudeCodeDesktopVM.md starting from Phase 3"
-echo " (RDP access — Phases 1 and 2 are handled by this script)."
 echo "============================================================"

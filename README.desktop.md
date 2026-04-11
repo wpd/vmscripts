@@ -1,15 +1,8 @@
-# Claude Code Desktop Development VM — Setup Guide
+# Ubuntu Desktop Development VM — Setup Guide
 
 Script for creating a Ubuntu Desktop 24.04 VM on a Ubuntu 24.04 LTS host,
 entirely from the command line with no VMware GUI required.
 Assumes/Tested with VMware Workstation Pro 25H2.
-
-This script creates a VM with the full GNOME desktop environment installed
-during the unattended installation, ready to proceed directly to RDP
-configuration and Claude Code setup as documented in `ClaudeCodeDesktopVM.md`.
-
-If you prefer a CLI-only server VM with the option to add a desktop later,
-see `README.server.md` and `create-ubuntu-server.sh` instead.
 
 ---
 
@@ -61,7 +54,7 @@ cp create-ubuntu.conf.example create-ubuntu.conf
 VM_BASE_DIR="$HOME/vmware"
 
 # Path to the original Ubuntu Server 24.04 ISO (not pre-modified)
-UBUNTU_SOURCE_ISO="/path/to/ubuntu-24.04.4-live-server-amd64.iso"
+UBUNTU_DESKTOP_SOURCE_ISO="/path/to/ubuntu-24.04.4-desktop-amd64.iso"
 
 # VM hardware settings
 # Recommended minimums for a desktop VM:
@@ -104,13 +97,14 @@ The hostname defaults to the vm-name if not specified.
 **Examples:**
 
 ```bash
-./create-ubuntu-desktop.sh claude-code-vm
-./create-ubuntu-desktop.sh claude-code-vm claude-code-vm
+./create-ubuntu-desktop.sh desktop-vm
+./create-ubuntu-desktop.sh desktop-vm desktop
 ```
 
 The script will:
 
-1. Build a customised Ubuntu autoinstall ISO with the full desktop environment
+1. Build a customised Ubuntu Desktop autoinstall ISO with your
+configuration
    baked in
 2. Create a new VM with `vmcli`
 3. Replace the default 20GB disk with a correctly-sized disk
@@ -120,9 +114,6 @@ The script will:
 
 The installer runs unattended and reboots automatically when complete. No
 interaction is required.
-
-> **Note:** Desktop installation takes significantly longer than server
-> installation — expect 10-20 minutes depending on host disk and network speed.
 
 ### Monitoring installation progress
 
@@ -141,18 +132,11 @@ tail -F /etc/vmware/vmnet8/dhcpd/dhcpd.leases
 When the installer completes and the VM reboots into the installed desktop
 system, a new lease will appear with your chosen hostname.
 
-Then SSH in:
+Then SSH in (if desired):
 
 ```bash
 ssh <username>@<ip-address>
 ```
-
-### Next steps
-
-Once the VM is accessible via SSH, continue with `ClaudeCodeDesktopVM.md`
-starting from **Phase 3** — RDP access via xrdp. Phases 1 and 2 of that
-document (server base installation and desktop environment installation) are
-handled by this script.
 
 ---
 
@@ -198,6 +182,9 @@ host <vm-name> {
 }
 ```
 
+Replace `00:0c:29:xx:xx:xx` with the MAC address from step 1 and
+`172.16.40.x` with your chosen static IP (e.g. `172.16.40.3`).
+
 **3. Restart VMware networking** (on the host):
 
 ```bash
@@ -220,8 +207,7 @@ ping 172.16.40.x
 
 ## Post-Installation: Configure SSH Port Forwarding
 
-To SSH into the VM directly from outside the host without needing to SSH into
-the host first, configure a port forward in VMware's NAT configuration.
+To SSH into the VM directly from outside the VM host, configure a port forward in VMware's NAT configuration.
 
 **1. Edit the NAT configuration file** (on the host):
 
@@ -236,6 +222,10 @@ Find the `[incomingtcp]` section and add a forward:
 # SSH forward: host port XXXX -> VM port 22
 XXXX = 172.16.40.x:22
 ```
+
+Replace `XXXX` with an unused port on the host (e.g. `9022`) and
+`172.16.40.x` with the VM's static IP. Choose a port that does not conflict
+with any other VM's port forward.
 
 **2. Restart VMware networking** (on the host):
 
@@ -254,14 +244,21 @@ ssh -p XXXX <username>@<host-ip>
 ## Note on MAC Address Stability
 
 VMware generates the MAC address for each VM deterministically based on the
-VM's file path. If you delete a VM and recreate it using
-`create-ubuntu-desktop.sh` with the same name in the same `VM_BASE_DIR`, the
-new VM will receive the same MAC address as the old one. This means any static
-DHCP lease or SSH port forward you configured will automatically apply to the
-new VM without modification.
+VM's file path. Specifically, it derives a UUID from a combination of the host
+machine's hardware identifiers and the full path to the `.vmx` file, and then
+derives the MAC address from that UUID.
+
+The practical consequence is that if you delete a VM and recreate it using
+`create-ubuntu-desktop.sh` with the same name in the same `VM_BASE_DIR`, the new VM will
+receive the same MAC address as the old one. This means:
+
+- Any static DHCP lease you configured in `dhcpd.conf` for the old VM will
+  automatically apply to the new VM — no changes to `dhcpd.conf` required.
+- Any SSH port forwards you configured in `nat.conf` will continue to work
+  without modification.
 
 The MAC address will change if you rename the VM or move it to a different
-directory.
+directory, since either change alters the path from which the UUID is derived.
 
 ---
 
