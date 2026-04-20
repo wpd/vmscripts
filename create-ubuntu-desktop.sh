@@ -220,7 +220,11 @@ ${SSH_KEYS_YAML}
     - curl
   late-commands:
     - curtin in-target -- systemctl enable ssh
-
+    # Subiquity's `layout: lvm` only allocates half the VG (capped at 100 GiB)
+    # to the root LV, leaving the rest as free extents. Grow the LV and its
+    # ext4 filesystem to consume all free space in ubuntu-vg.
+    - curtin in-target -- lvextend -l +100%FREE /dev/ubuntu-vg/ubuntu-lv
+    - curtin in-target -- resize2fs /dev/ubuntu-vg/ubuntu-lv
   user-data:
     disable_root: true
 EOF
